@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"code.google.com/p/go-uuid/uuid"
 	"code.google.com/p/gopacket/layers"
 	"code.google.com/p/gopacket/pcap"
 	//"code.google.com/p/gopacket/pcapgo"
@@ -15,7 +16,8 @@ import (
 	"github.com/zionist/gossip/parser"
 )
 
-func doParse(inPackages chan gopacket.Packet, outPackages chan base.SipMessage, done chan int) {
+func doParse(inPackages chan gopacket.Packet, outPackages chan base.SipMessage, done chan string) {
+	uuid := uuid.NewRandom()
 	for packet := range inPackages {
 		if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
 			//fmt.Println(packet.Metadata().Timestamp)
@@ -26,17 +28,20 @@ func doParse(inPackages chan gopacket.Packet, outPackages chan base.SipMessage, 
 				//panic("Err in thread")
 			} else {
 				outPackages <- msg
-				fmt.Printf("msg %s, in goroutine %d \n", msg.Short(), runtime.NumGoroutine())
+				//fmt.Printf("msg %s, in goroutine %s \n", msg.Short(), uuid.String())
 			}
 		}
 	}
-	done <- runtime.NumGoroutine()
+	done <- uuid.String()
+	//fmt.Printf("Goroutine %s finished\n", uuid.String())
 }
 
-func getParse(packages chan base.SipMessage) {
+func getParse(packages chan base.SipMessage, done chan string) {
+	uuid := uuid.NewRandom()
 	for msg := range packages {
 		fmt.Println(msg.Short())
 	}
+	done <- uuid.String()
 	//for range packages {
 	//
 	//	}
@@ -46,23 +51,29 @@ func main() {
 	// here we go
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	if handle, err := pcap.OpenOffline("/home/slaviann/work/teligent/multifone/samples/big.pcap"); err != nil {
+	if handle, err := pcap.OpenOffline("/home/slaviann/work/teligent/multifone/samples/small.pcap"); err != nil {
 		panic(err)
 	} else {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		packages := make(chan base.SipMessage)
 		//udpPackages := make(chan *layers.UDP)
 
-		done := make(chan int, runtime.NumCPU())
+		doneParse := make(chan string, runtime.NumCPU())
+		doneGet := make(chan string, runtime.NumCPU())
 		for i := 0; i < runtime.NumCPU(); i++ {
-			go doParse(packetSource.Packets(), packages, done)
-			go getParse(packages)
+			go doParse(packetSource.Packets(), packages, doneParse)
+			go getParse(packages, doneGet)
 		}
-		//wait all doParse gouroutines finished
+
 		for i := 0; i < runtime.NumCPU(); i++ {
-			<-done
+			<-doneParse
+			//fmt.Printf("goroutine %s finished \n", <-done)
 		}
 		close(packages)
+		for i := 0; i < runtime.NumCPU(); i++ {
+			<-doneGet
+			//fmt.Printf("goroutine %s finished \n", <-done2)
+		}
 	}
 
 }
