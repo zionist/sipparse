@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"runtime"
 
-	"code.google.com/p/go-uuid/uuid"
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
 	"code.google.com/p/gopacket/pcap"
@@ -16,7 +15,7 @@ import (
 )
 
 func doParse(inPackages chan gopacket.Packet, outPackages chan *tpackage.Tpackage, done chan string) {
-	uuid := uuid.NewRandom()
+	//uuid := uuid.NewRandom()
 	for packet := range inPackages {
 		if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
 			//fmt.Println(packet.Metadata().Timestamp)
@@ -32,12 +31,12 @@ func doParse(inPackages chan gopacket.Packet, outPackages chan *tpackage.Tpackag
 			}
 		}
 	}
-	done <- uuid.String()
+	done <- "s"
 	//fmt.Printf("Goroutine %s finished\n", uuid.String())
 }
 
 func getParse(packages chan *tpackage.Tpackage, done chan string) {
-	uuid := uuid.NewRandom()
+	//id := uuid.NewRandom()
 	calls := make(map[string]*call.Call)
 
 	for msg := range packages {
@@ -53,38 +52,33 @@ func getParse(packages chan *tpackage.Tpackage, done chan string) {
 				c := call.NewCall(msg)
 				calls[msg.SipPackage.Headers("Call-Id")[0].String()] = c
 			}
+			// Check each package does it belong to Call
+
+			//i := 0
+			for _, c := range calls {
+				//fmt.Println(i)
+				//i++
+				if c.CheckPackageInCall(msg) {
+					c.AddPackage(msg)
+					continue
+				}
+			}
+
 			//fmt.Println(msg.SipPackage.Short())
 		}
-		for _, c := range calls {
-			if c.CheckPackageInCall(msg) {
-				fmt.Println("yes")
-				c.AddPackage(msg)
-			} else {
-				fmt.Println("no")
-			}
-		}
 
-		// Check each package does it belong to Call
 	}
-	//fmt.Println(calls)
-
 	for _, call := range calls {
 		fmt.Println(call)
-		//fmt.Println(call.GetPackages())
 	}
-
-	//}
-	//for range packages {
-	//
-	//	}
-	done <- uuid.String()
+	done <- "s" //uiid.String()
 }
 
 func main() {
 	// set max
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	if handle, err := pcap.OpenOffline("/home/slaviann/work/teligent/multifone/samples/2calls.pcap"); err != nil {
+	if handle, err := pcap.OpenOffline("/home/slaviann/work/teligent/multifone/samples/big.pcap"); err != nil {
 		panic(err)
 	} else {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())

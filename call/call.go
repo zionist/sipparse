@@ -18,9 +18,9 @@ func (c *Call) GetPackages() []*tpackage.Tpackage {
 }
 
 func (c Call) String() string {
-	s := fmt.Sprintf("======= %s ======= \n", c.callID)
+	s := fmt.Sprintf("======= %s ======= ", c.callID)
 	for p := range c.packages {
-		s = fmt.Sprintf("%s %s \n", s, c.packages[p])
+		s = fmt.Sprintf("%s %s", s, c.packages[p])
 	}
 	return s
 }
