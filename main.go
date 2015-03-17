@@ -9,45 +9,67 @@ import (
 )
 import "code.google.com/p/gopacket"
 
-import "github.com/zionist/gossip/parser"
-import "github.com/zionist/gossip/base"
+import (
+	"github.com/zionist/gossip/base"
+	"github.com/zionist/gossip/parser"
+)
+
+func doParse(packages chan base.SipMessage, udp *layers.UDP) {
+	fmt.Println("# start")
+	msg, err := parser.ParseMessage(udp.Payload)
+	if err != nil {
+		fmt.Println(err)
+		panic("Err in thread")
+	}
+	packages <- msg
+	fmt.Println("# end")
+}
 
 func main() {
-	if handle, err := pcap.OpenOffline("/tmp/test.pcap"); err != nil {
+	if handle, err := pcap.OpenOffline("/home/slaviann/work/teligent/multifone/samples/big.pcap"); err != nil {
 		panic(err)
 	} else {
 
-		output := make(chan base.SipMessage)
-		errs := make(chan error)
-		pars := parser.NewParser(output, errs, false)
+		//output := make(chan base.SipMessage)
+		//errs := make(chan error)
+		//pars := parser.NewParser(output, errs, false)
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 		runs := 0
+		packages := make(chan base.SipMessage)
 		for packet := range packetSource.Packets() {
 			if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
-				fmt.Println(packet.Metadata().Timestamp)
+				//fmt.Println(packet.Metadata().Timestamp)
+				//parser.
 				udp, _ := udpLayer.(*layers.UDP)
+				go doParse(packages, udp)
+
 				//fmt.Println(string(udp.Payload))
-				pars.Write(udp.Payload)
-				//fmt.Printf("# write end %d %s", n, err)
-				//if err := <-errs; err != nil {
-				//	fmt.Println(err)
-				//} else {
-
-				if msg := <-output; msg != nil {
-					runs++
-					fmt.Println(msg.Headers("Call-Id"))
-				}
-				//err := <-errs
-				//fmt.Println(err)
-
+				//go pars.Write(udp.Payload)
+				runs++
 			}
+
 			//fmt.Println(string(packet.Data()))
 
 			//fmt.Printf(string(packet.Data()))
 			// Do something with a packet here.
 		}
-		fmt.Println(runs)
+
+		for msg := range packages {
+			runs--
+			// last run
+			if runs == 0 {
+				close(packages)
+			}
+			switch msg.(type) {
+			case *base.Request:
+				fmt.Printf("request %s \n", msg.Short())
+			case *base.Response:
+				fmt.Printf("responce %s \n", msg.Short())
+			}
+
+		}
+		//}
 
 	}
 
