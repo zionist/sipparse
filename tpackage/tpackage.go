@@ -37,14 +37,11 @@ func NewTpackage(sipPackage base.SipMessage, timestamp time.Time) *Tpackage {
 		s, _ := sipPackage.(*base.Request)
 		t.Method = s.Method
 	case *base.Response:
-
-		//fmt.Printf("responce %s \n", msg.SipPackage.Short())
 	}
-	//t.Method = sipPackage.
+
 	return t
 }
 
 func (t Tpackage) String() string {
 	return ""
-	//return t.SipPackage.String()
 }
