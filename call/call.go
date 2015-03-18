@@ -1,11 +1,6 @@
 package call
 
-import (
-	"fmt"
-
-	"github.com/zionist/sipparse/tpackage"
-)
-
+/*
 // Call struct. Earch call equals SCenario
 type Call struct {
 	packages []*tpackage.Tpackage
@@ -57,3 +52,4 @@ func (c *Call) CheckPackageInCall(pack *tpackage.Tpackage) bool {
 
 	//}
 }
+*/
